@@ -115,6 +115,17 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/daily-revenue")
+    public ResponseEntity<?> getDailyRevenue() {
+        try {
+            List<Map<String, Object>> result = adminService.getDailyRevenue();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Error fetching daily revenue: ", e);
+            return ResponseEntity.status(500).body("Error fetching daily revenue: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/dashboard/stats")
     public ResponseEntity<?> getDashboardStats() {
         try {

@@ -1,5 +1,6 @@
 package scooterrent.config;
 
+import scooterrent.exception.BusinessException;
 import scooterrent.entity.Role;
 import scooterrent.entity.Scooter;
 import scooterrent.entity.User;
@@ -79,7 +80,7 @@ public class SQLiteDataInitializer implements CommandLineRunner {
             admin.setPassword(passwordEncoder.encode("admin123"));
             admin.setEmail("admin@example.com");
             Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                .orElseThrow(() -> new RuntimeException("Admin role not found"));
+                .orElseThrow(() -> new BusinessException(500, "Admin role not found"));
             admin.setRole(adminRole);
             userRepository.save(admin);
         }
@@ -90,7 +91,7 @@ public class SQLiteDataInitializer implements CommandLineRunner {
             user.setPassword(passwordEncoder.encode("user123"));
             user.setEmail("user@example.com");
             Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new RuntimeException("User role not found"));
+                .orElseThrow(() -> new BusinessException(500, "User role not found"));
             user.setRole(userRole);
             userRepository.save(user);
         }

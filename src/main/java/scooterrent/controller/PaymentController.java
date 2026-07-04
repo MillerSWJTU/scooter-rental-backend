@@ -1,5 +1,6 @@
 package scooterrent.controller;
 
+import scooterrent.exception.BusinessException;
 import scooterrent.dto.PaymentRequest;
 import scooterrent.entity.Payment;
 import scooterrent.service.RentalPaymentService;
@@ -43,7 +44,7 @@ public class PaymentController {
             logger.info("邮件已成功发送至 {}", to);
         } catch (Exception e) {
             logger.error("发送邮件失败: {}", e.getMessage(), e);
-            throw new RuntimeException("邮件发送失败，请检查配置", e);
+            throw new BusinessException(500, "邮件发送失败，请检查配置");
         }
     }
 

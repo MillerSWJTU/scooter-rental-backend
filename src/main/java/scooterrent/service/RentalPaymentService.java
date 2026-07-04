@@ -1,5 +1,6 @@
 package scooterrent.service;
 
+import scooterrent.exception.BusinessException;
 import scooterrent.entity.Payment;
 import scooterrent.entity.Rental;
 import scooterrent.repository.PaymentRepository;
@@ -35,17 +36,17 @@ public class RentalPaymentService {
                 rentalId, amount, paymentMethod, email);
 
             Rental rental = rentalRepository.findById(rentalId)
-                    .orElseThrow(() -> new RuntimeException("Rental not found with id: " + rentalId));
+                    .orElseThrow(() -> new BusinessException(404, "Rental not found with id: " + rentalId));
 
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new RuntimeException("Payment amount must be greater than zero");
+                throw new BusinessException(400, "Payment amount must be greater than zero");
             }
 
             // 如果是钱包支付，扣除余额
             if ("WALLET".equalsIgnoreCase(paymentMethod)) {
                 scooterrent.entity.User user = rental.getUser();
                 if (user.getBalance().compareTo(amount) < 0) {
-                    throw new RuntimeException("Insufficient wallet balance");
+                    throw new BusinessException(400, "Insufficient wallet balance");
                 }
                 user.setBalance(user.getBalance().subtract(amount));
                 userRepository.save(user);
@@ -65,13 +66,13 @@ public class RentalPaymentService {
             return savedPayment;
         } catch (Exception e) {
             logger.error("Error creating payment for rental {}: {}", rentalId, e.getMessage(), e);
-            throw new RuntimeException("Error creating payment: " + e.getMessage());
+            throw new BusinessException(500, "Error creating payment: " + e.getMessage());
         }
     }
 
     public Payment getPaymentById(Long id) {
         return paymentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+                .orElseThrow(() -> new BusinessException(404, "Payment not found"));
     }
 
     public List<Payment> getPaymentsByRentalId(Long rentalId) {
@@ -81,7 +82,7 @@ public class RentalPaymentService {
     @Transactional
     public Payment updatePaymentStatus(Long id, String status) {
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+                .orElseThrow(() -> new BusinessException(404, "Payment not found"));
         
         payment.setStatus(status);
         return paymentRepository.save(payment);

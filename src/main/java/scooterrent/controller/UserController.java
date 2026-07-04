@@ -1,20 +1,21 @@
 package scooterrent.controller;
 
-import scooterrent.dto.UserDTO;
 import scooterrent.dto.RegisterRequestDTO;
+import scooterrent.dto.UserDTO;
 import scooterrent.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*") // 允许所有源的跨域请求
 public class UserController {
-    
+
     @Autowired
     private UserService userService;
 
@@ -28,9 +29,9 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserByUsername(username));
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<UserDTO> registerUser(@Valid @RequestBody RegisterRequestDTO registrationDTO) {
-        return ResponseEntity.ok(userService.register(registrationDTO));
+    @PostMapping
+    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody RegisterRequestDTO dto) {
+        return ResponseEntity.ok(userService.register(dto));
     }
 
     @PutMapping("/{username}")
@@ -40,27 +41,36 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(username, userDTO));
     }
 
-    @DeleteMapping("/{username}")
-    public ResponseEntity<Void> deleteUser(@PathVariable String username) {
-        userService.deleteUser(username);
+    @PutMapping("/{username}/role")
+    public ResponseEntity<Void> updateUserRole(
+            @PathVariable String username,
+            @RequestBody Map<String, String> body) {
+        userService.setUserRole(username, body.get("role"));
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/verify-discount")
-    public ResponseEntity<?> verifyDiscount(org.springframework.security.core.Authentication authentication) {
-        String username = authentication.getName();
-        userService.setUserRole(username, "ROLE_DISCOUNT");
+    @PutMapping("/{username}/password")
+    public ResponseEntity<Void> updatePassword(
+            @PathVariable String username,
+            @RequestBody Map<String, String> body) {
+        userService.updatePassword(username, body.get("oldPassword"), body.get("newPassword"));
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{username}/recharge")
     public ResponseEntity<UserDTO> rechargeBalance(
             @PathVariable String username,
-            @RequestBody java.util.Map<String, java.math.BigDecimal> request) {
-        java.math.BigDecimal amount = request.get("amount");
+            @RequestBody Map<String, BigDecimal> request) {
+        BigDecimal amount = request.get("amount");
         if (amount == null) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok(userService.rechargeBalance(username, amount));
     }
-} 
+
+    @DeleteMapping("/{username}")
+    public ResponseEntity<Void> deleteUser(@PathVariable String username) {
+        userService.deleteUser(username);
+        return ResponseEntity.ok().build();
+    }
+}

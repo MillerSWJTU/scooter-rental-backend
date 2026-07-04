@@ -158,6 +158,22 @@ public class AdminService {
         return result;
     }
 
+    public List<Map<String, Object>> getDailyRevenue() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate day = today.minusDays(i);
+            LocalDateTime start = day.atStartOfDay();
+            LocalDateTime end = day.plusDays(1).atStartOfDay();
+            Double sum = rentalRepository.sumTotalCostByCreatedAtBetween(start, end);
+            Map<String, Object> map = new HashMap<>();
+            map.put("name", day.getDayOfWeek().toString());
+            map.put("revenue", sum == null ? 0 : sum);
+            result.add(map);
+        }
+        return result;
+    }
+
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", getTotalUsers());

@@ -1,7 +1,9 @@
 package scooterrent.exception;
 
-public class UserRegistrationException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserRegistrationException extends BusinessException {
     public UserRegistrationException(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST, message);
     }
-} 
+}

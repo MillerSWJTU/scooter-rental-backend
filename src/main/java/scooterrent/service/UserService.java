@@ -4,6 +4,7 @@ import scooterrent.dto.RegisterRequestDTO;
 import scooterrent.dto.UserDTO;
 import scooterrent.entity.User;
 import scooterrent.entity.Role;
+import scooterrent.exception.BusinessException;
 import scooterrent.exception.UserRegistrationException;
 import scooterrent.repository.UserRepository;
 import scooterrent.repository.RoleRepository;
@@ -49,7 +50,7 @@ public class UserService {
 
     public UserDTO getUserByUsername(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("用户不存在"));
+                .orElseThrow(() -> new BusinessException(404, "用户不存在"));
         return convertToDTO(user);
     }
 
@@ -62,7 +63,7 @@ public class UserService {
     @Transactional
     public UserDTO updateUser(String username, UserDTO userDTO) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("用户不存在"));
+                .orElseThrow(() -> new BusinessException(404, "用户不存在"));
 
         user.setEmail(userDTO.getEmail());
         user.setPhone(userDTO.getPhone());
@@ -70,7 +71,7 @@ public class UserService {
         // 更新角色
         if (userDTO.getRole() != null) {
             Role role = roleRepository.findByName(userDTO.getRole())
-                    .orElseThrow(() -> new RuntimeException("角色不存在"));
+                    .orElseThrow(() -> new BusinessException(404, "角色不存在"));
             user.setRole(role);
         }
 
@@ -81,16 +82,27 @@ public class UserService {
     @Transactional
     public void deleteUser(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("用户不存在"));
+                .orElseThrow(() -> new BusinessException(404, "用户不存在"));
         userRepository.delete(user);
+    }
+
+    @Transactional
+    public void updatePassword(String username, String oldPassword, String newPassword) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new BusinessException(404, "用户不存在"));
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException(400, "原密码错误");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Transactional
     public void setUserRole(String username, String roleName) {
         User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("用户不存在"));
+            .orElseThrow(() -> new BusinessException(404, "用户不存在"));
         Role role = roleRepository.findByName(roleName)
-            .orElseThrow(() -> new RuntimeException("角色不存在"));
+            .orElseThrow(() -> new BusinessException(404, "角色不存在"));
         user.setRole(role);
         userRepository.save(user);
     }
@@ -98,10 +110,10 @@ public class UserService {
     @Transactional
     public UserDTO rechargeBalance(String username, java.math.BigDecimal amount) {
         if (amount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Recharge amount must be positive");
+            throw new BusinessException(400, "Recharge amount must be positive");
         }
         User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("用户不存在"));
+            .orElseThrow(() -> new BusinessException(404, "用户不存在"));
         
         user.setBalance(user.getBalance().add(amount));
         User savedUser = userRepository.save(user);

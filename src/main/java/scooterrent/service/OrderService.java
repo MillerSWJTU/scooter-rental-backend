@@ -1,5 +1,6 @@
 package scooterrent.service;
 
+import scooterrent.exception.BusinessException;
 import scooterrent.dto.OrderDTO;
 import scooterrent.entity.Order;
 import scooterrent.entity.Scooter;
@@ -39,13 +40,13 @@ public class OrderService {
     public OrderDTO createOrder(OrderDTO orderDTO) {
         // 获取用户和滑板车
         User user = userRepository.findByUsername(orderDTO.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found: " + orderDTO.getUsername()));
+                .orElseThrow(() -> new BusinessException(404, "User not found: " + orderDTO.getUsername()));
         Scooter scooter = scooterRepository.findById(orderDTO.getScooterId())
-                .orElseThrow(() -> new RuntimeException("Scooter not found: " + orderDTO.getScooterId()));
+                .orElseThrow(() -> new BusinessException(404, "Scooter not found: " + orderDTO.getScooterId()));
 
         // 检查滑板车是否可用
         if (scooter.getStatus() != ScooterStatus.AVAILABLE) {
-            throw new RuntimeException("Scooter is not available");
+            throw new BusinessException(400, "Scooter is not available");
         }
 
         // 创建订单
@@ -70,7 +71,7 @@ public class OrderService {
     public OrderDTO getOrderById(Long id) {
         Optional<Order> order = orderRepository.findById(id);
         return order.map(o -> modelMapper.map(o, OrderDTO.class))
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+                .orElseThrow(() -> new BusinessException(404, "Order not found with id: " + id));
     }
 
     public List<OrderDTO> getOrdersByUsername(String username) {
@@ -110,7 +111,7 @@ public class OrderService {
             Order updatedOrder = orderRepository.save(order);
             return modelMapper.map(updatedOrder, OrderDTO.class);
         }
-        throw new RuntimeException("Order not found with id: " + id);
+        throw new BusinessException(404, "Order not found with id: " + id);
     }
 
     @Transactional
@@ -124,7 +125,7 @@ public class OrderService {
             Order updatedOrder = orderRepository.save(order);
             return modelMapper.map(updatedOrder, OrderDTO.class);
         }
-        throw new RuntimeException("Order not found with id: " + id);
+        throw new BusinessException(404, "Order not found with id: " + id);
     }
 
     @Transactional
@@ -139,7 +140,7 @@ public class OrderService {
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
         } else {
-            throw new RuntimeException("Order not found with id: " + id);
+            throw new BusinessException(404, "Order not found with id: " + id);
         }
     }
 
@@ -160,7 +161,7 @@ public class OrderService {
     @Transactional
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+                .orElseThrow(() -> new BusinessException(404, "Order not found with id: " + id));
                 
         if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.PAID) {
             // 如果订单状态是待处理或已支付，可以在这里添加额外的处理逻辑

@@ -1,5 +1,6 @@
 package scooterrent.service;
 
+import scooterrent.exception.BusinessException;
 import scooterrent.dto.ScooterDTO;
 import scooterrent.entity.Scooter;
 import scooterrent.enums.ScooterStatus;
@@ -40,7 +41,7 @@ public class ScooterService {
     public ScooterDTO getScooterById(Long id) {
         Optional<Scooter> scooter = scooterRepository.findById(id);
         return scooter.map(s -> modelMapper.map(s, ScooterDTO.class))
-                .orElseThrow(() -> new RuntimeException("Scooter not found with id: " + id));
+                .orElseThrow(() -> new BusinessException(404, "Scooter not found with id: " + id));
     }
 
     public List<ScooterDTO> getAllScooters() {
@@ -62,7 +63,7 @@ public class ScooterService {
         if (scooterRepository.existsById(id)) {
             scooterRepository.deleteById(id);
         } else {
-            throw new RuntimeException("Scooter not found with id: " + id);
+            throw new BusinessException(404, "Scooter not found with id: " + id);
         }
     }
 
@@ -79,13 +80,13 @@ public class ScooterService {
             Scooter updatedScooter = scooterRepository.save(scooter);
             return modelMapper.map(updatedScooter, ScooterDTO.class);
         }
-        throw new RuntimeException("Scooter not found with id: " + id);
+        throw new BusinessException(404, "Scooter not found with id: " + id);
     }
 
     @Transactional
     public ScooterDTO updateScooter(Long id, ScooterDTO scooterDTO) {
         Scooter scooter = scooterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Scooter not found with id: " + id));
+                .orElseThrow(() -> new BusinessException(404, "Scooter not found with id: " + id));
 
         // Explicitly update only the relevant fields for general update
         // Exclude price fields - those are handled by updateScooterPrice

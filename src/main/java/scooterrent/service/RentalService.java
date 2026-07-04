@@ -1,5 +1,6 @@
 package scooterrent.service;
 
+import scooterrent.exception.BusinessException;
 import scooterrent.dto.RentalDTO;
 import scooterrent.dto.ScooterDTO;
 import scooterrent.entity.Rental;
@@ -74,7 +75,7 @@ public class RentalService {
 
     public RentalDTO getRentalById(Long id) {
         Rental rental = rentalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rental not found"));
+                .orElseThrow(() -> new BusinessException(404, "Rental not found"));
         RentalDTO dto = modelMapper.map(rental, RentalDTO.class);
         dto.setStatus(rental.getStatus());
         return dto;
@@ -83,17 +84,17 @@ public class RentalService {
     @Transactional
     public RentalDTO createRental(String username, Long scooterId, RentalDTO rentalDetails) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessException(404, "User not found"));
 
         Scooter scooter = scooterRepository.findById(scooterId)
-                .orElseThrow(() -> new RuntimeException("Scooter not found"));
+                .orElseThrow(() -> new BusinessException(404, "Scooter not found"));
 
         if (scooter.getStatus() != ScooterStatus.AVAILABLE) {
-            throw new RuntimeException("Scooter is not available");
+            throw new BusinessException(400, "Scooter is not available");
         }
 
         if (rentalDetails.getDuration() == null || rentalDetails.getDuration() <= 0) {
-            throw new RuntimeException("Invalid rental duration");
+            throw new BusinessException(400, "Invalid rental duration");
         }
 
         Rental rental = new Rental();
@@ -120,10 +121,10 @@ public class RentalService {
     @Transactional
     public RentalDTO endRental(Long id, RentalDTO endDetails) {
         Rental rental = rentalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rental not found"));
+                .orElseThrow(() -> new BusinessException(404, "Rental not found"));
 
         if (!rental.isActive()) {
-            throw new RuntimeException("Rental is not active");
+            throw new BusinessException(400, "Rental is not active");
         }
 
         LocalDateTime endTime = LocalDateTime.now();
@@ -148,18 +149,18 @@ public class RentalService {
     @Transactional
     public RentalDTO extendRental(Long id, Integer additionalHours) {
         if (id == null) {
-            throw new RuntimeException("Rental ID cannot be null");
+            throw new BusinessException(400, "Rental ID cannot be null");
         }
         
         if (additionalHours == null || additionalHours <= 0) {
-            throw new RuntimeException("Additional hours must be greater than zero");
+            throw new BusinessException(400, "Additional hours must be greater than zero");
         }
         
         Rental rental = rentalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rental not found"));
+                .orElseThrow(() -> new BusinessException(404, "Rental not found"));
 
         if (!rental.isActive()) {
-            throw new RuntimeException("Rental is not active");
+            throw new BusinessException(400, "Rental is not active");
         }
 
         try {
@@ -188,17 +189,17 @@ public class RentalService {
             dto.setExtensionHours(additionalHours); // 设置扩展时间
         return dto;
         } catch (Exception e) {
-            throw new RuntimeException("Error extending rental: " + e.getMessage(), e);
+            throw new BusinessException(500, "Error extending rental: " + e.getMessage());
         }
     }
 
     @Transactional
     public RentalDTO cancelRental(Long id) {
         Rental rental = rentalRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rental not found"));
+                .orElseThrow(() -> new BusinessException(404, "Rental not found"));
 
         if (!rental.isActive()) {
-            throw new RuntimeException("Rental is not active");
+            throw new BusinessException(400, "Rental is not active");
         }
 
         rental.setActive(false);
@@ -218,11 +219,11 @@ public class RentalService {
 
     public double calculateRentalCost(Long rentalId, String startTime, String endTime, String plan) {
         Rental rental = rentalRepository.findById(rentalId)
-                .orElseThrow(() -> new RuntimeException("Rental not found"));
+                .orElseThrow(() -> new BusinessException(404, "Rental not found"));
         
         Scooter scooter = rental.getScooter();
         if (scooter == null) {
-            throw new RuntimeException("Scooter not found for rental");
+            throw new BusinessException(404, "Scooter not found for rental");
         }
 
         LocalDateTime start = LocalDateTime.parse(startTime);

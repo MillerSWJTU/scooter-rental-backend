@@ -1,5 +1,6 @@
 package scooterrent.service;
 
+import scooterrent.exception.BusinessException;
 import scooterrent.dto.FeedbackDTO;
 import scooterrent.dto.FeedbackRequestDTO;
 import scooterrent.entity.Feedback;
@@ -33,7 +34,7 @@ public class FeedbackService {
     @Transactional
     public FeedbackDTO createFeedback(FeedbackRequestDTO requestDTO) {
         User user = userRepository.findByUsername(requestDTO.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessException(404, "User not found"));
 
         Feedback feedback = new Feedback();
         feedback.setUser(user);
@@ -45,7 +46,7 @@ public class FeedbackService {
 
         if (requestDTO.getPaymentId() != null) {
             Payment payment = paymentRepository.findById(requestDTO.getPaymentId())
-                    .orElseThrow(() -> new RuntimeException("Payment not found"));
+                    .orElseThrow(() -> new BusinessException(404, "Payment not found"));
             feedback.setPayment(payment);
         }
 
@@ -56,10 +57,10 @@ public class FeedbackService {
     @Transactional
     public FeedbackDTO createFeedbackForPayment(Long paymentId, FeedbackRequestDTO requestDTO) {
         Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+                .orElseThrow(() -> new BusinessException(404, "Payment not found"));
 
         User user = userRepository.findByUsername(requestDTO.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessException(404, "User not found"));
 
         Feedback feedback = new Feedback();
         feedback.setUser(user);
@@ -76,7 +77,7 @@ public class FeedbackService {
 
     public FeedbackDTO getFeedbackById(Integer id) {
         return convertToDTO(feedbackRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Feedback not found")));
+                .orElseThrow(() -> new BusinessException(404, "Feedback not found")));
     }
 
     public List<FeedbackDTO> getFeedbacksByUsername(String username) {
@@ -103,7 +104,7 @@ public class FeedbackService {
     @Transactional
     public FeedbackDTO updateFeedbackStatus(Integer id, FeedbackStatus status) {
         Feedback feedback = feedbackRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new BusinessException(404, "Feedback not found"));
 
         feedback.setStatus(status);
         if (status == FeedbackStatus.RESOLVED) {
@@ -117,7 +118,7 @@ public class FeedbackService {
     @Transactional
     public FeedbackDTO addAdminResponse(Integer id, String response) {
         Feedback feedback = feedbackRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new BusinessException(404, "Feedback not found"));
 
         feedback.setAdminResponse(response);
         feedback.setStatus(FeedbackStatus.RESOLVED);

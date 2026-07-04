@@ -5,6 +5,7 @@ import scooterrent.dto.LoginResponse;
 import scooterrent.dto.RegisterRequestDTO;
 import scooterrent.entity.Role;
 import scooterrent.entity.User;
+import scooterrent.exception.BusinessException;
 import scooterrent.exception.UserRegistrationException;
 import scooterrent.repository.RoleRepository;
 import scooterrent.repository.UserRepository;
@@ -63,7 +64,7 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         User user = userRepository.findByUsername(request.getUsername())
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new BusinessException(404, "User not found"));
 
         String token = jwtTokenUtil.generateToken(user.getUsername());
         return new LoginResponse(user.getId(), token, user.getUsername(), user.getRole().getName(), user.getEmail(), user.getPhone());

@@ -53,15 +53,14 @@ public class SecurityConfig {
                 // 2. 管理员专属
                 // =============================================
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/roles/**").hasRole("ADMIN")
-                .requestMatchers("/api/statistics/**").hasRole("ADMIN")
                 // 滑板车写操作
                 .requestMatchers(HttpMethod.POST, "/api/scooters").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/scooters/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/scooters/**").hasRole("ADMIN")
                 // 用户管理
                 .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/users/register").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/users/{username}/role").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
                 // 订单管理
                 .requestMatchers(HttpMethod.GET, "/api/orders").hasRole("ADMIN")
@@ -87,6 +86,7 @@ public class SecurityConfig {
                 // =============================================
                 .requestMatchers(HttpMethod.GET, "/api/users/{username}").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.PUT, "/api/users/{username}").access(selfOrAdmin())
+                .requestMatchers(HttpMethod.PUT, "/api/users/{username}/password").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.POST, "/api/users/{username}/recharge").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.GET, "/api/orders/user/{username}").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.GET, "/api/orders/user/{username}/date-range").access(selfOrAdmin())
@@ -100,7 +100,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/orders/**").hasAnyRole("USER", "DISCOUNT", "ADMIN")
                 .requestMatchers("/api/payments/**").hasAnyRole("USER", "DISCOUNT", "ADMIN")
                 .requestMatchers("/api/feedback/**").hasAnyRole("USER", "DISCOUNT", "ADMIN")
-                .requestMatchers("/api/users/verify-discount").hasAnyRole("USER", "DISCOUNT", "ADMIN")
 
                 // =============================================
                 // 5. 其余一律拒绝（漏配即 403，fail-closed）
