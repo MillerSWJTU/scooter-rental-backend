@@ -11,10 +11,13 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.WeekFields;
 import java.util.*;
 
 @Service
 public class AdminService {
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd");
 
     @Autowired
     private RentalRepository rentalRepository;
@@ -25,160 +28,121 @@ public class AdminService {
     @Autowired
     private RoleRepository roleRepository;
 
-    public List<Rental> getAllRentals() {
-        return rentalRepository.findAll();
-    }
+    // ==================== 收入 ====================
 
-    public List<Rental> getRentalsByScooterId(Long scooterId) {
-        return rentalRepository.findByScooterId(scooterId);
-    }
-
-    public long getTotalUsers() {
-        return userRepository.count();
-    }
-
-    public long getTotalOrders() {
-        return rentalRepository.count();
-    }
-
-    public double getTotalRevenue() {
-        Double sum = rentalRepository.sumTotalCost();
-        return sum != null ? sum : 0.0;
-    }
-
-    public List<Map<String, Object>> getUserRoleDistribution() {
-        List<Role> roles = roleRepository.findAll();
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Role role : roles) {
-            long count = userRepository.countByRole(role);
-            Map<String, Object> roleData = new HashMap<>();
-            roleData.put("name", role.getName());
-            roleData.put("value", count);
-            result.add(roleData);
-        }
-        return result;
-    }
-
-    public List<Map<String, Object>> getWeeklyRentalIncome() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd");
+    /** 近7天收入，按方案分组 */
+    public List<Map<String, Object>> getRevenueWeekly() {
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = endDate.minusDays(6);
-
-        // 用日期范围查询，只拿7天的数据
         List<Rental> rentals = rentalRepository.findByStartTimeBetween(
                 startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (int i = 0; i < 7; i++) {
-            LocalDate date = startDate.plusDays(i);
-            Map<String, Object> dayData = new HashMap<>();
-            dayData.put("date", date.format(formatter));
-            dayData.put("HOURLY", 0.0);
-            dayData.put("FOUR_HOURS", 0.0);
-            dayData.put("DAILY", 0.0);
-            dayData.put("WEEKLY", 0.0);
-            dayData.put("TOTAL", 0.0);
-            result.add(dayData);
+            Map<String, Object> day = new HashMap<>();
+            day.put("date", startDate.plusDays(i).format(DATE_FMT));
+            day.put("HOURLY", 0.0);
+            day.put("FOUR_HOURS", 0.0);
+            day.put("DAILY", 0.0);
+            day.put("WEEKLY", 0.0);
+            day.put("TOTAL", 0.0);
+            result.add(day);
         }
 
-        for (Rental rental : rentals) {
-            if (rental.getStartTime() == null || rental.getTotalCost() == null || rental.getPlan() == null) {
-                continue;
-            }
-            String dateStr = rental.getStartTime().toLocalDate().format(formatter);
-            for (Map<String, Object> day : result) {
-                if (day.get("date").equals(dateStr)) {
-                    day.put(rental.getPlan(), (Double) day.get(rental.getPlan()) + rental.getTotalCost());
-                    day.put("TOTAL", (Double) day.get("TOTAL") + rental.getTotalCost());
-                    break;
-                }
+        for (Rental r : rentals) {
+            if (r.getStartTime() == null || r.getTotalCost() == null || r.getPlan() == null) continue;
+            String ds = r.getStartTime().toLocalDate().format(DATE_FMT);
+            result.stream().filter(d -> d.get("date").equals(ds)).findFirst().ifPresent(d -> {
+                d.put(r.getPlan(), (Double) d.get(r.getPlan()) + r.getTotalCost());
+                d.put("TOTAL", (Double) d.get("TOTAL") + r.getTotalCost());
+            });
+        }
+        return result;
+    }
+
+    /** 近7天收入，按天汇总 */
+    public List<Map<String, Object>> getRevenueDaily() {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(6);
+        List<Rental> rentals = rentalRepository.findByStartTimeBetween(
+                startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            Map<String, Object> day = new HashMap<>();
+            day.put("date", startDate.plusDays(i).format(DATE_FMT));
+            day.put("income", 0.0);
+            result.add(day);
+        }
+
+        for (Rental r : rentals) {
+            if (r.getStartTime() == null || r.getTotalCost() == null) continue;
+            String ds = r.getStartTime().toLocalDate().format(DATE_FMT);
+            result.stream().filter(d -> d.get("date").equals(ds)).findFirst()
+                    .ifPresent(d -> d.put("income", (Double) d.get("income") + r.getTotalCost()));
+        }
+        return result;
+    }
+
+    /** 某台滑板车本周每日收入 */
+    public List<Map<String, Object>> getScooterRevenue(Long scooterId) {
+        List<Rental> rentals = rentalRepository.findByScooterId(scooterId);
+        Map<String, Double> dailyIncome = new TreeMap<>();
+        LocalDateTime now = LocalDateTime.now();
+        WeekFields wf = WeekFields.of(Locale.getDefault());
+        int currentWeek = now.get(wf.weekOfWeekBasedYear());
+
+        rentals.stream()
+                .filter(r -> r.getEndTime() != null && r.getTotalCost() != null)
+                .filter(r -> r.getEndTime().get(wf.weekOfWeekBasedYear()) == currentWeek)
+                .forEach(r -> dailyIncome.merge(r.getEndTime().toLocalDate().toString(), r.getTotalCost(), Double::sum));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, Double> e : dailyIncome.entrySet()) {
+            result.add(Map.of("date", e.getKey(), "income", e.getValue()));
+        }
+        if (result.isEmpty()) {
+            for (int i = 0; i < 7; i++) {
+                result.add(Map.of("date", now.minusDays(6 - i).toLocalDate().toString(), "income", 0.0));
             }
         }
         return result;
     }
 
+    // ==================== 统计 ====================
+
+    /** 租赁方案统计 */
     public List<Map<String, Object>> getRentalPlanStats() {
-        // 用 GROUP BY 查询，数据库直接聚合
         List<Object[]> rows = rentalRepository.countAndSumByPlan();
         List<Map<String, Object>> result = new ArrayList<>();
+        Map<String, String> planNames = Map.of(
+                "HOURLY", "1 Hour", "FOUR_HOURS", "4 Hours", "DAILY", "1 Day", "WEEKLY", "1 Week");
         for (Object[] row : rows) {
-            String dbPlan = row[0] != null ? row[0].toString() : "UNKNOWN";
-            long count = row[1] != null ? ((Number) row[1]).longValue() : 0;
-            double revenue = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
-
-            String planName;
-            switch (dbPlan) {
-                case "HOURLY":    planName = "1 Hour"; break;
-                case "FOUR_HOURS": planName = "4 Hours"; break;
-                case "DAILY":     planName = "1 Day"; break;
-                case "WEEKLY":    planName = "1 Week"; break;
-                default:          continue;
-            }
-
-            Map<String, Object> planData = new HashMap<>();
-            planData.put("plan", planName);
-            planData.put("count", count);
-            planData.put("value", count);
-            planData.put("revenue", revenue);
-            result.add(planData);
+            String plan = row[0] != null ? row[0].toString() : null;
+            if (plan == null || !planNames.containsKey(plan)) continue;
+            result.add(Map.of(
+                    "plan", planNames.get(plan),
+                    "count", ((Number) row[1]).longValue(),
+                    "revenue", row[2] != null ? ((Number) row[2]).doubleValue() : 0.0));
         }
         return result;
     }
 
-    public List<Map<String, Object>> getCombinedDailyIncome() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd");
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(6);
-
-        // 用日期范围查询
-        List<Rental> rentals = rentalRepository.findByStartTimeBetween(
-                startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
-
+    /** 用户角色分布 */
+    public List<Map<String, Object>> getUserRoleDistribution() {
         List<Map<String, Object>> result = new ArrayList<>();
-        for (int i = 0; i < 7; i++) {
-            LocalDate date = startDate.plusDays(i);
-            Map<String, Object> dayData = new HashMap<>();
-            dayData.put("date", date.format(formatter));
-            dayData.put("income", 0.0);
-            result.add(dayData);
-        }
-
-        for (Rental rental : rentals) {
-            if (rental.getStartTime() == null || rental.getTotalCost() == null) {
-                continue;
-            }
-            String dateStr = rental.getStartTime().toLocalDate().format(formatter);
-            for (Map<String, Object> day : result) {
-                if (day.get("date").equals(dateStr)) {
-                    day.put("income", (Double) day.get("income") + rental.getTotalCost());
-                    break;
-                }
-            }
+        for (Role role : roleRepository.findAll()) {
+            result.add(Map.of("name", role.getName(), "value", userRepository.countByRole(role)));
         }
         return result;
     }
 
-    public List<Map<String, Object>> getDailyRevenue() {
-        List<Map<String, Object>> result = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        for (int i = 6; i >= 0; i--) {
-            LocalDate day = today.minusDays(i);
-            LocalDateTime start = day.atStartOfDay();
-            LocalDateTime end = day.plusDays(1).atStartOfDay();
-            Double sum = rentalRepository.sumTotalCostByCreatedAtBetween(start, end);
-            Map<String, Object> map = new HashMap<>();
-            map.put("name", day.getDayOfWeek().toString());
-            map.put("revenue", sum == null ? 0 : sum);
-            result.add(map);
-        }
-        return result;
-    }
-
-    public Map<String, Object> getDashboardStats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalUsers", getTotalUsers());
-        stats.put("totalOrders", getTotalOrders());
-        stats.put("totalRevenue", getTotalRevenue());
-        return stats;
+    /** 仪表盘总览 */
+    public Map<String, Object> getDashboard() {
+        Double revenue = rentalRepository.sumTotalCost();
+        return Map.of(
+                "totalUsers", userRepository.count(),
+                "totalRentals", rentalRepository.count(),
+                "totalRevenue", revenue != null ? revenue : 0.0);
     }
 }
