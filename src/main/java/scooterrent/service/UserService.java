@@ -1,19 +1,13 @@
 package scooterrent.service;
 
-import scooterrent.dto.LoginRequestDTO;
-import scooterrent.dto.LoginResponse;
 import scooterrent.dto.RegisterRequestDTO;
 import scooterrent.dto.UserDTO;
 import scooterrent.entity.User;
 import scooterrent.entity.Role;
+import scooterrent.exception.UserRegistrationException;
 import scooterrent.repository.UserRepository;
 import scooterrent.repository.RoleRepository;
-import scooterrent.util.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,20 +27,14 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private JwtTokenUtil jwtTokenUtil;
-
     @Transactional
     public UserDTO register(RegisterRequestDTO registrationDTO) {
         if (userRepository.existsByUsername(registrationDTO.getUsername())) {
-            throw new RuntimeException("用户名已存在");
+            throw new UserRegistrationException("用户名已存在");
         }
 
         Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new RuntimeException("用户角色不存在"));
+                .orElseThrow(() -> new UserRegistrationException("用户角色不存在"));
 
         User user = new User();
         user.setUsername(registrationDTO.getUsername());
@@ -57,44 +45,6 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
         return convertToDTO(savedUser);
-    }
-
-    @Transactional
-    public UserDTO registerAdmin(RegisterRequestDTO registrationDTO) {
-        if (userRepository.existsByUsername(registrationDTO.getUsername())) {
-            throw new RuntimeException("用户名已存在");
-        }
-
-        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                .orElseThrow(() -> new RuntimeException("管理员角色不存在"));
-
-        User user = new User();
-        user.setUsername(registrationDTO.getUsername());
-        user.setPassword(passwordEncoder.encode(registrationDTO.getPassword()));
-        user.setEmail(registrationDTO.getEmail());
-        user.setPhone(registrationDTO.getPhone());
-        user.setRole(adminRole);
-
-        User savedUser = userRepository.save(user);
-        return convertToDTO(savedUser);
-    }
-
-    public LoginResponse login(LoginRequestDTO loginDTO) {
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword())
-        );
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        User user = userRepository.findByUsername(loginDTO.getUsername())
-            .orElseThrow(() -> new RuntimeException("用户不存在"));
-
-        String token = jwtTokenUtil.generateToken(user.getUsername());
-        return new LoginResponse(token, user.getUsername(), user.getRole().getName(), user.getEmail(), user.getPhone());
-    }
-
-    public UserDTO getUserById(Integer id) {
-        throw new UnsupportedOperationException("Method not supported. Use getUserByUsername instead.");
     }
 
     public UserDTO getUserByUsername(String username) {
@@ -129,11 +79,6 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUser(Integer id) {
-        throw new UnsupportedOperationException("Method not supported. Use deleteUser(String username) instead.");
-    }
-
-    @Transactional
     public void deleteUser(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
@@ -165,6 +110,7 @@ public class UserService {
 
     private UserDTO convertToDTO(User user) {
         UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());

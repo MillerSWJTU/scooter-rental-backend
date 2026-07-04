@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,14 +21,12 @@ public class RoleController {
     private RoleService roleService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Role>> getAllRoles() {
         logger.info("获取所有角色");
         return ResponseEntity.ok(roleService.getAllRoles());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Role> getRoleById(@PathVariable Long id) {
         logger.info("通过ID获取角色: {}", id);
         Optional<Role> role = roleService.getRoleById(id);
@@ -38,7 +35,6 @@ public class RoleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Role> createRole(@RequestBody Role role) {
         logger.info("创建新角色: {}", role.getName());
 
@@ -53,7 +49,6 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Role> updateRole(@PathVariable Long id, @RequestBody Role role) {
         logger.info("更新ID为 {} 的角色", id);
 
@@ -69,7 +64,6 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
         logger.info("删除ID为 {} 的角色", id);
 

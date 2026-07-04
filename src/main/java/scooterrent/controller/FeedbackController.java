@@ -6,7 +6,6 @@ import scooterrent.enums.FeedbackStatus;
 import scooterrent.service.FeedbackService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +18,6 @@ public class FeedbackController {
     private FeedbackService feedbackService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<FeedbackDTO>> getAllFeedbacks() {
         return ResponseEntity.ok(feedbackService.getAllFeedbacks());
     }
@@ -64,7 +62,6 @@ public class FeedbackController {
     }
 
     @PutMapping("/{id}/response")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FeedbackDTO> addAdminResponse(
             @PathVariable Integer id,
             @RequestParam String response) {

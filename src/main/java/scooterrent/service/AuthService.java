@@ -5,6 +5,7 @@ import scooterrent.dto.LoginResponse;
 import scooterrent.dto.RegisterRequestDTO;
 import scooterrent.entity.Role;
 import scooterrent.entity.User;
+import scooterrent.exception.UserRegistrationException;
 import scooterrent.repository.RoleRepository;
 import scooterrent.repository.UserRepository;
 import scooterrent.util.JwtTokenUtil;
@@ -36,7 +37,7 @@ public class AuthService {
 
     public LoginResponse register(RegisterRequestDTO request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already exists");
+            throw new UserRegistrationException("Username already exists");
         }
 
         User user = new User();
@@ -45,13 +46,13 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         Role userRole = roleRepository.findByName("ROLE_USER")
-            .orElseThrow(() -> new RuntimeException("User role not found"));
+            .orElseThrow(() -> new UserRegistrationException("User role not found"));
         user.setRole(userRole);
 
         userRepository.save(user);
 
         String token = jwtTokenUtil.generateToken(user.getUsername());
-        return new LoginResponse(token, user.getUsername(), user.getRole().getName(), user.getEmail(), user.getPhone());
+        return new LoginResponse(user.getId(), token, user.getUsername(), user.getRole().getName(), user.getEmail(), user.getPhone());
     }
 
     public LoginResponse login(LoginRequestDTO request) {
@@ -65,6 +66,6 @@ public class AuthService {
             .orElseThrow(() -> new RuntimeException("User not found"));
 
         String token = jwtTokenUtil.generateToken(user.getUsername());
-        return new LoginResponse(token, user.getUsername(), user.getRole().getName(), user.getEmail(), user.getPhone());
+        return new LoginResponse(user.getId(), token, user.getUsername(), user.getRole().getName(), user.getEmail(), user.getPhone());
     }
 } 

@@ -15,7 +15,7 @@ public class Feedback {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "user_username", referencedColumnName = "username", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne

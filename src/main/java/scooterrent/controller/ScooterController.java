@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -27,7 +26,6 @@ public class ScooterController {
     private ScooterService scooterService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Create Scooter", description = "Create a new scooter")
     public ResponseEntity<ScooterDTO> createScooter(@RequestBody ScooterDTO scooterDTO) {
         return ResponseEntity.ok(scooterService.createScooter(scooterDTO));
@@ -54,7 +52,6 @@ public class ScooterController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete Scooter", description = "Delete a specific scooter")
     public ResponseEntity<Void> deleteScooter(
             @Parameter(description = "Scooter ID", required = true)
@@ -64,7 +61,6 @@ public class ScooterController {
     }
 
     @PutMapping("/{id}/price")
-    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update Scooter Pricing", description = "Update the pricing information of a scooter")
     public ResponseEntity<ScooterDTO> updateScooterPrice(
             @Parameter(description = "Scooter ID", required = true)
@@ -78,7 +74,6 @@ public class ScooterController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update Scooter", description = "Update details of a specific scooter")
     public ResponseEntity<ScooterDTO> updateScooter(
             @Parameter(description = "Scooter ID", required = true)
