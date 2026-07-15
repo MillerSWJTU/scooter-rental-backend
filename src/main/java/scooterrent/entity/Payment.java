@@ -1,5 +1,6 @@
 package scooterrent.entity;
 
+import scooterrent.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -33,7 +34,8 @@ public class Payment {
     private String transactionId;
 
     @Column(name = "status")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus status;
 
     @Column(name = "email", nullable = false) // 新增字段
     private String email;

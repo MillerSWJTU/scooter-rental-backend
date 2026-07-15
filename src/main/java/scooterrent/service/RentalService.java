@@ -1,25 +1,27 @@
 package scooterrent.service;
 
-import scooterrent.exception.BusinessException;
 import scooterrent.dto.RentalDTO;
-import scooterrent.dto.ScooterDTO;
 import scooterrent.entity.Rental;
 import scooterrent.entity.Scooter;
-import scooterrent.enums.ScooterStatus;
 import scooterrent.entity.User;
+import scooterrent.enums.RentalStatus;
+import scooterrent.enums.ScooterStatus;
+import scooterrent.exception.BusinessException;
 import scooterrent.repository.RentalRepository;
 import scooterrent.repository.ScooterRepository;
 import scooterrent.repository.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import scooterrent.dto.RentalPlanStatsDTO;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
 
 @Service
 public class RentalService {
@@ -37,63 +39,28 @@ public class RentalService {
     private ModelMapper modelMapper;
 
     public List<RentalDTO> getUserRentals(String username) {
-        return rentalRepository.findByUserUsername(username)
-                .stream()
-                .map(rental -> {
-                    RentalDTO dto = new RentalDTO();
-                    // 手动映射基本字段
-                    dto.setId(rental.getId());
-                    dto.setUsername(rental.getUser().getUsername());
-                    dto.setScooterId(rental.getScooter().getId());
-                    dto.setStartTime(rental.getStartTime());
-                    dto.setEndTime(rental.getEndTime());
-                    dto.setStartLocation(rental.getStartLocation());
-                    dto.setEndLocation(rental.getEndLocation());
-                    dto.setTotalCost(rental.getTotalCost());
-                    dto.setActive(rental.isActive());
-                    dto.setDuration(rental.getDuration());
-                    dto.setPlan(rental.getPlan());
-                    dto.setStatus(rental.getStatus());
-                    
-                    // 映射滑板车信息
-                    if (rental.getScooter() != null) {
-                        ScooterDTO scooterDTO = new ScooterDTO();
-                        scooterDTO.setId(rental.getScooter().getId());
-                        scooterDTO.setModel(rental.getScooter().getModel());
-                        scooterDTO.setStatus(rental.getScooter().getStatus());
-                        scooterDTO.setBatteryLevel(rental.getScooter().getBatteryLevel());
-                        scooterDTO.setLocation(rental.getScooter().getLocation());
-                        scooterDTO.setLatitude(rental.getScooter().getLatitude());
-                        scooterDTO.setLongitude(rental.getScooter().getLongitude());
-                        dto.setScooter(scooterDTO);
-                    }
-                    
-                    return dto;
-                })
+        return rentalRepository.findByUserUsername(username).stream()
+                .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     public RentalDTO getRentalById(Long id) {
         Rental rental = rentalRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "Rental not found"));
-        RentalDTO dto = modelMapper.map(rental, RentalDTO.class);
-        dto.setStatus(rental.getStatus());
-        return dto;
+        return toDTO(rental);
     }
 
     @Transactional
-    public RentalDTO createRental(String username, Long scooterId, RentalDTO rentalDetails) {
+    public RentalDTO createRental(String username, Long scooterId, RentalDTO dto) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(404, "User not found"));
-
         Scooter scooter = scooterRepository.findById(scooterId)
                 .orElseThrow(() -> new BusinessException(404, "Scooter not found"));
 
         if (scooter.getStatus() != ScooterStatus.AVAILABLE) {
             throw new BusinessException(400, "Scooter is not available");
         }
-
-        if (rentalDetails.getDuration() == null || rentalDetails.getDuration() <= 0) {
+        if (dto.getDuration() == null || dto.getDuration() <= 0) {
             throw new BusinessException(400, "Invalid rental duration");
         }
 
@@ -101,49 +68,36 @@ public class RentalService {
         rental.setUser(user);
         rental.setScooter(scooter);
         rental.setStartTime(LocalDateTime.now());
-        rental.setStartLocation(rentalDetails.getStartLocation());
-        rental.setActive(true);
-        rental.setDuration(rentalDetails.getDuration());
-        rental.setPlan(rentalDetails.getPlan());
-
-        rental.setEndTime(rental.getStartTime().plusHours(rental.getDuration()));
-
-        double totalCost = calculateTotalCost(scooter, rental.getStartTime(), rental.getEndTime(), rental.getPlan(), rental.getDuration());
-        rental.setTotalCost(totalCost);
+        rental.setStartLocation(dto.getStartLocation());
+        rental.setDuration(dto.getDuration());
+        rental.setPlan(dto.getPlan() != null ? dto.getPlan() : "HOURLY");
+        rental.setEndTime(rental.getStartTime().plusHours(dto.getDuration()));
+        rental.setTotalCost(calculateCost(scooter, rental));
 
         scooter.setStatus(ScooterStatus.RENTED);
         scooterRepository.save(scooter);
 
-        Rental savedRental = rentalRepository.save(rental);
-        return modelMapper.map(savedRental, RentalDTO.class);
+        return toDTO(rentalRepository.save(rental));
     }
 
     @Transactional
-    public RentalDTO endRental(Long id, RentalDTO endDetails) {
+    public RentalDTO endRental(Long id, String endLocation) {
         Rental rental = rentalRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "Rental not found"));
 
-        if (!rental.isActive()) {
+        if (rental.getStatus() != RentalStatus.ACTIVE) {
             throw new BusinessException(400, "Rental is not active");
         }
 
-        LocalDateTime endTime = LocalDateTime.now();
-        rental.setEndTime(endTime);
-        rental.setEndLocation(endDetails.getEndLocation());
-        rental.setActive(false);
+        rental.setEndTime(LocalDateTime.now());
+        rental.setEndLocation(endLocation);
+        rental.setStatus(RentalStatus.COMPLETED);
+        rental.setTotalCost(calculateCost(rental.getScooter(), rental));
 
-        // Calculate and set total cost
-        double totalCost = calculateTotalCost(rental.getScooter(), rental.getStartTime(), endTime, rental.getPlan(), rental.getDuration());
-        rental.setTotalCost(totalCost);
+        rental.getScooter().setStatus(ScooterStatus.AVAILABLE);
+        scooterRepository.save(rental.getScooter());
 
-        Scooter scooter = rental.getScooter();
-        scooter.setStatus(ScooterStatus.AVAILABLE);
-        scooterRepository.save(scooter);
-
-        Rental savedRental = rentalRepository.save(rental);
-        RentalDTO dto = modelMapper.map(savedRental, RentalDTO.class);
-        dto.setStatus("COMPLETED");
-        return dto;
+        return toDTO(rentalRepository.save(rental));
     }
 
     @Transactional
@@ -151,46 +105,22 @@ public class RentalService {
         if (id == null) {
             throw new BusinessException(400, "Rental ID cannot be null");
         }
-        
         if (additionalHours == null || additionalHours <= 0) {
             throw new BusinessException(400, "Additional hours must be greater than zero");
         }
-        
+
         Rental rental = rentalRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "Rental not found"));
 
-        if (!rental.isActive()) {
+        if (rental.getStatus() != RentalStatus.ACTIVE) {
             throw new BusinessException(400, "Rental is not active");
         }
 
-        try {
-            // 更新租赁时长
-            rental.setDuration(rental.getDuration() + additionalHours);
-            
-            // 更新结束时间
-            rental.setEndTime(rental.getStartTime().plusHours(rental.getDuration()));
-            
-            // 重新计算费用
-            double cost = calculateTotalCost(
-                rental.getScooter(), 
-                rental.getStartTime(), 
-                rental.getEndTime(), 
-                rental.getPlan(), 
-                rental.getDuration()
-            );
-            rental.setTotalCost(cost);
+        rental.setDuration(rental.getDuration() + additionalHours);
+        rental.setEndTime(rental.getStartTime().plusHours(rental.getDuration()));
+        rental.setTotalCost(calculateCost(rental.getScooter(), rental));
 
-            // 保存更新后的租赁信息
-            Rental updatedRental = rentalRepository.save(rental);
-            
-            // 返回更新后的租赁信息
-            RentalDTO dto = modelMapper.map(updatedRental, RentalDTO.class);
-            dto.setStatus(updatedRental.getStatus());
-            dto.setExtensionHours(additionalHours); // 设置扩展时间
-        return dto;
-        } catch (Exception e) {
-            throw new BusinessException(500, "Error extending rental: " + e.getMessage());
-        }
+        return toDTO(rentalRepository.save(rental));
     }
 
     @Transactional
@@ -198,90 +128,68 @@ public class RentalService {
         Rental rental = rentalRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "Rental not found"));
 
-        if (!rental.isActive()) {
+        if (rental.getStatus() != RentalStatus.ACTIVE) {
             throw new BusinessException(400, "Rental is not active");
         }
 
-        rental.setActive(false);
+        rental.setStatus(RentalStatus.CANCELLED);
         rental.setEndTime(LocalDateTime.now());
-        rental.setTotalCost(0.0); // 确保取消时费用为0
-        rental.setStatus("CANCELLED"); // 显式设置状态
+        rental.setTotalCost(0.0);
 
-        Scooter scooter = rental.getScooter();
-        scooter.setStatus(ScooterStatus.AVAILABLE);
-        scooterRepository.save(scooter);
+        rental.getScooter().setStatus(ScooterStatus.AVAILABLE);
+        scooterRepository.save(rental.getScooter());
 
-        Rental savedRental = rentalRepository.save(rental);
-        RentalDTO dto = modelMapper.map(savedRental, RentalDTO.class);
-        dto.setStatus("CANCELLED"); // 确保状态正确设置
-        return dto;
+        return toDTO(rentalRepository.save(rental));
     }
 
-    public double calculateRentalCost(Long rentalId, String startTime, String endTime, String plan) {
-        Rental rental = rentalRepository.findById(rentalId)
-                .orElseThrow(() -> new BusinessException(404, "Rental not found"));
-        
-        Scooter scooter = rental.getScooter();
-        if (scooter == null) {
-            throw new BusinessException(404, "Scooter not found for rental");
-        }
+    // ==================== 计费 ====================
 
-        LocalDateTime start = LocalDateTime.parse(startTime);
-        LocalDateTime end = LocalDateTime.parse(endTime);
-        
-        return calculateTotalCost(scooter, start, end, plan, rental.getDuration());
-    }
+    private double calculateCost(Scooter scooter, Rental rental) {
+        String plan = rental.getPlan() != null ? rental.getPlan() : "HOURLY";
+        int duration = rental.getDuration();
+        double price;
 
-    private double calculateTotalCost(Scooter scooter, LocalDateTime startTime, LocalDateTime endTime, String plan, Integer duration) {
-        if (plan == null) {
-            plan = "HOURLY"; // Default to hourly if plan is not specified
-        }
-        double price = 0;
         switch (plan) {
-            case "DAILY":
-                price = duration * scooter.getPricePerDay();
-                break;
             case "WEEKLY":
-                price = duration * scooter.getPricePerWeek();
+                price = Math.ceil(duration / (24.0 * 7)) * scooter.getPricePerWeek();
+                break;
+            case "DAILY":
+                price = Math.ceil(duration / 24.0) * scooter.getPricePerDay();
                 break;
             case "FOUR_HOURS":
-                price = duration * scooter.getPricePerFourHours();
+                price = Math.ceil(duration / 4.0) * scooter.getPricePerFourHours();
                 break;
             case "HOURLY":
             default:
-        long hours = java.time.Duration.between(startTime, endTime).toHours();
-        if (hours == 0) {
-            hours = 1; // Minimum rental period is 1 hour
+                long hours = Duration.between(rental.getStartTime(), rental.getEndTime()).toHours();
+                price = Math.max(1, hours) * scooter.getPricePerHour();
         }
-                price = hours * scooter.getPricePerHour();
-        }
-        // 8折优惠逻辑
-        // 如果有用户信息且角色为ROLE_DISCOUNT，则打8折
-        // 这里假设调用方有user字段（如createRental等），否则需传入user参数
-        try {
-            // 尝试从当前线程上下文获取用户
-            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getPrincipal() instanceof scooterrent.entity.User) {
-                scooterrent.entity.User user = (scooterrent.entity.User) auth.getPrincipal();
-                if (user.getRole() != null && "ROLE_DISCOUNT".equals(user.getRole().getName())) {
-                    price = price * 0.8;
-                }
-            }
-        } catch (Exception e) {
-            // 忽略异常，保持原价
+
+        if (hasDiscount()) {
+            price *= 0.8;
         }
         return price;
     }
 
-    public List<RentalPlanStatsDTO> getRentalPlanStats() {
-        List<Object[]> results = rentalRepository.countAndSumByPlan();
-        List<RentalPlanStatsDTO> stats = new ArrayList<>();
-        for (Object[] row : results) {
-            String plan = row[0] == null ? "UNKNOWN" : row[0].toString();
-            long count = row[1] == null ? 0L : ((Number) row[1]).longValue();
-            double revenue = row[2] == null ? 0.0 : ((Number) row[2]).doubleValue();
-            stats.add(new RentalPlanStatsDTO(plan, count, revenue));
-        }
-        return stats;
+    private boolean hasDiscount() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_DISCOUNT"::equals);
     }
-} 
+
+    // ==================== DTO 映射 ====================
+
+    private RentalDTO toDTO(Rental rental) {
+        RentalDTO dto = modelMapper.map(rental, RentalDTO.class);
+        if (rental.getUser() != null) {
+            dto.setUsername(rental.getUser().getUsername());
+        }
+        if (rental.getScooter() != null) {
+            dto.setScooterId(rental.getScooter().getId());
+            dto.setScooterModel(rental.getScooter().getModel());
+        }
+        return dto;
+    }
+}

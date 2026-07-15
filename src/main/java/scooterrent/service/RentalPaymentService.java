@@ -1,8 +1,9 @@
 package scooterrent.service;
 
-import scooterrent.exception.BusinessException;
 import scooterrent.entity.Payment;
 import scooterrent.entity.Rental;
+import scooterrent.enums.PaymentStatus;
+import scooterrent.exception.BusinessException;
 import scooterrent.repository.PaymentRepository;
 import scooterrent.repository.RentalRepository;
 import org.slf4j.Logger;
@@ -31,43 +32,35 @@ public class RentalPaymentService {
 
     @Transactional
     public Payment createPayment(Long rentalId, BigDecimal amount, String paymentMethod, String email, String transactionId) {
-        try {
-            logger.info("Creating payment for rental {} with amount {} and method {} and email {}", 
-                rentalId, amount, paymentMethod, email);
+        logger.info("Creating payment for rental {} with amount {} and method {}",
+                rentalId, amount, paymentMethod);
 
-            Rental rental = rentalRepository.findById(rentalId)
-                    .orElseThrow(() -> new BusinessException(404, "Rental not found with id: " + rentalId));
+        Rental rental = rentalRepository.findById(rentalId)
+                .orElseThrow(() -> new BusinessException(404, "Rental not found"));
 
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BusinessException(400, "Payment amount must be greater than zero");
-            }
-
-            // 如果是钱包支付，扣除余额
-            if ("WALLET".equalsIgnoreCase(paymentMethod)) {
-                scooterrent.entity.User user = rental.getUser();
-                if (user.getBalance().compareTo(amount) < 0) {
-                    throw new BusinessException(400, "Insufficient wallet balance");
-                }
-                user.setBalance(user.getBalance().subtract(amount));
-                userRepository.save(user);
-            }
-
-            Payment payment = new Payment();
-            payment.setRental(rental);
-            payment.setAmount(amount);
-            payment.setPaymentMethod(paymentMethod);
-            payment.setTransactionId(transactionId);
-            payment.setPaymentTime(LocalDateTime.now());
-            payment.setEmail(email);
-            payment.setStatus("COMPLETED");
-
-            Payment savedPayment = paymentRepository.save(payment);
-            logger.info("Payment created successfully with id: {}", savedPayment.getId());
-            return savedPayment;
-        } catch (Exception e) {
-            logger.error("Error creating payment for rental {}: {}", rentalId, e.getMessage(), e);
-            throw new BusinessException(500, "Error creating payment: " + e.getMessage());
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(400, "Payment amount must be greater than zero");
         }
+
+        if ("WALLET".equalsIgnoreCase(paymentMethod)) {
+            scooterrent.entity.User user = rental.getUser();
+            if (user.getBalance().compareTo(amount) < 0) {
+                throw new BusinessException(400, "Insufficient wallet balance");
+            }
+            user.setBalance(user.getBalance().subtract(amount));
+            userRepository.save(user);
+        }
+
+        Payment payment = new Payment();
+        payment.setRental(rental);
+        payment.setAmount(amount);
+        payment.setPaymentMethod(paymentMethod);
+        payment.setTransactionId(transactionId);
+        payment.setPaymentTime(LocalDateTime.now());
+        payment.setEmail(email);
+        payment.setStatus(PaymentStatus.COMPLETED);
+
+        return paymentRepository.save(payment);
     }
 
     public Payment getPaymentById(Long id) {
@@ -80,19 +73,18 @@ public class RentalPaymentService {
     }
 
     @Transactional
-    public Payment updatePaymentStatus(Long id, String status) {
+    public Payment updatePaymentStatus(Long id, PaymentStatus status) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "Payment not found"));
-        
         payment.setStatus(status);
         return paymentRepository.save(payment);
     }
 
-    public List<Payment> getPaymentsByStatus(String status) {
+    public List<Payment> getPaymentsByStatus(PaymentStatus status) {
         return paymentRepository.findByStatus(status);
     }
 
     public List<Payment> getPaymentsByDateRange(LocalDateTime start, LocalDateTime end) {
         return paymentRepository.findByPaymentTimeBetween(start, end);
     }
-} 
+}

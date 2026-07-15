@@ -11,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/rentals")
-@CrossOrigin(origins = "*")
 public class RentalController {
 
     @Autowired
@@ -28,51 +27,30 @@ public class RentalController {
     }
 
     @PostMapping
-    public ResponseEntity<RentalDTO> createRental(
-            @RequestParam String username,
-            @RequestParam Long scooterId,
-            @RequestBody RentalDTO rentalDTO) {
-        return ResponseEntity.ok(rentalService.createRental(username, scooterId, rentalDTO));
+    public ResponseEntity<RentalDTO> createRental(@RequestBody RentalDTO dto) {
+        return ResponseEntity.ok(rentalService.createRental(dto.getUsername(), dto.getScooterId(), dto));
     }
 
     @PutMapping("/{id}/end")
     public ResponseEntity<RentalDTO> endRental(
             @PathVariable Long id,
-            @RequestBody RentalDTO endDetails) {
-        return ResponseEntity.ok(rentalService.endRental(id, endDetails));
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(rentalService.endRental(id, body.get("endLocation")));
     }
 
     @PutMapping("/{id}/extend")
     public ResponseEntity<RentalDTO> extendRental(
             @PathVariable Long id,
-            @RequestBody Map<String, Integer> extensionDetails) {
-        try {
-            Integer additionalHours = extensionDetails.get("extensionHours");
-            if (additionalHours == null || additionalHours <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-            RentalDTO updatedRental = rentalService.extendRental(id, additionalHours);
-            return ResponseEntity.ok(updatedRental);
-        } catch (RuntimeException e) {
+            @RequestBody Map<String, Integer> body) {
+        Integer hours = body.get("additionalHours");
+        if (hours == null || hours <= 0) {
             return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
         }
+        return ResponseEntity.ok(rentalService.extendRental(id, hours));
     }
 
     @PutMapping("/{id}/cancel")
     public ResponseEntity<RentalDTO> cancelRental(@PathVariable Long id) {
         return ResponseEntity.ok(rentalService.cancelRental(id));
     }
-
-    @PostMapping("/calculate-cost")
-    public ResponseEntity<Map<String, Double>> calculateRentalCost(@RequestBody Map<String, Object> params) {
-        Long rentalId = Long.valueOf(params.get("rentalId").toString());
-        String startTime = params.get("startTime").toString();
-        String endTime = params.get("endTime").toString();
-        String plan = params.get("plan").toString();
-        
-        double cost = rentalService.calculateRentalCost(rentalId, startTime, endTime, plan);
-        return ResponseEntity.ok(Map.of("totalCost", cost));
-    }
-} 
+}

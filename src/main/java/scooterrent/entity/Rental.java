@@ -1,5 +1,6 @@
 package scooterrent.entity;
 
+import scooterrent.enums.RentalStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -33,31 +34,26 @@ public class Rental {
     private String endLocation;
 
     @Column(nullable = false)
-    private Boolean active;
+    @Enumerated(EnumType.STRING)
+    private RentalStatus status;
 
     private Double totalCost;
 
-    private String notes;
+    @Column(nullable = false)
+    private Integer duration;
 
     @Column(nullable = false)
-    private Integer duration; // 租赁时长（小时）
-
-    @Column(nullable = false)
-    private String plan; // 租赁方案：DAILY, WEEKLY, FOUR_HOURS, HOURLY
+    private String plan;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    public boolean isActive() {
-        return active;
-    }
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (active == null) {
-            active = true;
+        if (status == null) {
+            status = RentalStatus.ACTIVE;
         }
     }
 
@@ -65,34 +61,4 @@ public class Rental {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    public String getStatus() {
-        if (active) {
-            return "ACTIVE";
-        } else if (totalCost == 0) {
-            return "CANCELLED";
-        } else if (endTime != null) {
-            return "COMPLETED";
-        } else {
-            return "UNKNOWN";
-        }
-    }
-
-    public void setStatus(String status) {
-        switch (status.toUpperCase()) {
-            case "ACTIVE":
-                this.active = true;
-                break;
-            case "COMPLETED":
-                this.active = false;
-                this.endTime = LocalDateTime.now();
-                break;
-            case "CANCELLED":
-                this.active = false;
-                this.totalCost = 0.0;
-                break;
-            default:
-                this.active = false;
-        }
-    }
-} 
+}

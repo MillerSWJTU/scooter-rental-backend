@@ -65,20 +65,20 @@ public class SecurityConfig {
                 // 订单管理
                 .requestMatchers(HttpMethod.GET, "/api/orders").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/orders/status/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/api/orders/**/status").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/api/orders/*/status").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/orders/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/orders/date-range").hasRole("ADMIN")
                 // 支付管理
                 .requestMatchers(HttpMethod.GET, "/api/payments/status/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/payments/date-range").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/payments/**/status").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/payments/**/simulate").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/payments/*/status").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/payments/*/simulate").hasRole("ADMIN")
                 // 反馈管理
                 .requestMatchers(HttpMethod.GET, "/api/feedback").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/feedback/status/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/feedback/type/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/feedback/**/status").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/feedback/**/response").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/feedback/*/status").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/feedback/*/response").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/feedback/**").hasRole("ADMIN")
 
                 // =============================================

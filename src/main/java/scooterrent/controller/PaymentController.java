@@ -1,5 +1,6 @@
 package scooterrent.controller;
 
+import scooterrent.enums.PaymentStatus;
 import scooterrent.exception.BusinessException;
 import scooterrent.dto.PaymentRequest;
 import scooterrent.entity.Payment;
@@ -66,7 +67,7 @@ public class PaymentController {
             );
 
             // 如果支付状态为 COMPLETED，发送邮件确认
-            if ("COMPLETED".equals(payment.getStatus())) {
+            if (PaymentStatus.COMPLETED.equals(payment.getStatus())) {
                 String subject = "支付成功确认";
                 String body = String.format("您的支付已成功！\n支付金额：%s\n交易ID：%s\n感谢您的使用！",
                         payment.getAmount(), payment.getTransactionId());
@@ -96,13 +97,13 @@ public class PaymentController {
     @PutMapping("/{id}/status")
     public ResponseEntity<Payment> updatePaymentStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
+            @RequestParam PaymentStatus status) {
         Payment payment = rentalPaymentService.updatePaymentStatus(id, status);
         return ResponseEntity.ok(payment);
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<Payment>> getPaymentsByStatus(@PathVariable String status) {
+    public ResponseEntity<List<Payment>> getPaymentsByStatus(@PathVariable PaymentStatus status) {
         List<Payment> payments = rentalPaymentService.getPaymentsByStatus(status);
         return ResponseEntity.ok(payments);
     }
@@ -126,7 +127,7 @@ public class PaymentController {
             }
 
             // 模拟支付成功
-            payment = rentalPaymentService.updatePaymentStatus(id, "COMPLETED");
+            payment = rentalPaymentService.updatePaymentStatus(id, PaymentStatus.COMPLETED);
             return ResponseEntity.ok(payment);
         } catch (Exception e) {
             logger.error("Error simulating payment for ID {}: {}", id, e.getMessage(), e);
