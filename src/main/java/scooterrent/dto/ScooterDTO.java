@@ -22,6 +22,8 @@ public class ScooterDTO {
     private String lastMaintenanceDate;
     private String nextMaintenanceDate;
     private String maintenanceNotes;
+    private Integer rentalCount;
+    private Double totalRevenue;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 } 

@@ -46,9 +46,17 @@ public class ScooterService {
 
     public List<ScooterDTO> getAllScooters() {
         List<Scooter> scooters = scooterRepository.findAll();
-        return scooters.stream()
-                .map(scooter -> modelMapper.map(scooter, ScooterDTO.class))
-                .collect(Collectors.toList());
+        Map<Long, Object[]> statsMap = new HashMap<>();
+        for (Object[] row : rentalRepository.findScooterRentalStats()) {
+            statsMap.put(((Number) row[0]).longValue(), row);
+        }
+        return scooters.stream().map(scooter -> {
+            ScooterDTO dto = modelMapper.map(scooter, ScooterDTO.class);
+            Object[] stat = statsMap.get(scooter.getId());
+            dto.setRentalCount(stat == null ? 0 : ((Number) stat[1]).intValue());
+            dto.setTotalRevenue(stat == null ? 0.0 : stat[2] == null ? 0.0 : ((Number) stat[2]).doubleValue());
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     public List<ScooterDTO> getAvailableScooters() {
