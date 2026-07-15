@@ -16,6 +16,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * 滑板车接口
+ * 权限：GET 公开 / POST PUT DELETE 管理员
+ */
 @RestController
 @RequestMapping("/api/scooters")
 @CrossOrigin(origins = "*")

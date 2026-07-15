@@ -54,27 +54,6 @@ public class FeedbackService {
         return convertToDTO(savedFeedback);
     }
 
-    @Transactional
-    public FeedbackDTO createFeedbackForPayment(Long paymentId, FeedbackRequestDTO requestDTO) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new BusinessException(404, "Payment not found"));
-
-        User user = userRepository.findByUsername(requestDTO.getUsername())
-                .orElseThrow(() -> new BusinessException(404, "User not found"));
-
-        Feedback feedback = new Feedback();
-        feedback.setUser(user);
-        feedback.setPayment(payment);
-        feedback.setContent(requestDTO.getContent());
-        feedback.setType(FeedbackType.valueOf(requestDTO.getType()));
-        feedback.setStatus(FeedbackStatus.PENDING);
-        feedback.setRating(requestDTO.getRating());
-        feedback.setContactInfo(requestDTO.getContactInfo());
-
-        Feedback savedFeedback = feedbackRepository.save(feedback);
-        return convertToDTO(savedFeedback);
-    }
-
     public FeedbackDTO getFeedbackById(Integer id) {
         return convertToDTO(feedbackRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "Feedback not found")));

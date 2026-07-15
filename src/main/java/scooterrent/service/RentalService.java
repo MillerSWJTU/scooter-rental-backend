@@ -146,23 +146,22 @@ public class RentalService {
 
     private double calculateCost(Scooter scooter, Rental rental) {
         String plan = rental.getPlan() != null ? rental.getPlan() : "HOURLY";
-        int duration = rental.getDuration();
+        long actualHours = Duration.between(rental.getStartTime(), rental.getEndTime()).toHours();
         double price;
 
         switch (plan) {
             case "WEEKLY":
-                price = Math.ceil(duration / (24.0 * 7)) * scooter.getPricePerWeek();
+                price = Math.ceil(actualHours / (24.0 * 7)) * scooter.getPricePerWeek();
                 break;
             case "DAILY":
-                price = Math.ceil(duration / 24.0) * scooter.getPricePerDay();
+                price = Math.ceil(actualHours / 24.0) * scooter.getPricePerDay();
                 break;
             case "FOUR_HOURS":
-                price = Math.ceil(duration / 4.0) * scooter.getPricePerFourHours();
+                price = Math.ceil(actualHours / 4.0) * scooter.getPricePerFourHours();
                 break;
             case "HOURLY":
             default:
-                long hours = Duration.between(rental.getStartTime(), rental.getEndTime()).toHours();
-                price = Math.max(1, hours) * scooter.getPricePerHour();
+                price = Math.max(1, actualHours) * scooter.getPricePerHour();
         }
 
         if (hasDiscount()) {

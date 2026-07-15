@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 租赁接口
+ * 权限：
+ *   GET /rentals/user/{username} — 本人或管理员
+ *   其余 — 登录即可（USER / DISCOUNT / ADMIN）
+ */
 @RestController
 @RequestMapping("/api/rentals")
 public class RentalController {

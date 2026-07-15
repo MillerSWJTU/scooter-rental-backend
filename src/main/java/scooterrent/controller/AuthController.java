@@ -4,21 +4,21 @@ import scooterrent.dto.LoginRequestDTO;
 import scooterrent.dto.LoginResponse;
 import scooterrent.dto.RegisterRequestDTO;
 import scooterrent.service.AuthService;
-import scooterrent.util.JwtTokenUtil;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 认证接口
+ * 权限：全部公开（permitAll）
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired
     private AuthService authService;
-
-    @Autowired
-    private JwtTokenUtil jwtTokenUtil;
 
     @PostMapping("/register")
     public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequestDTO request) {
@@ -30,16 +30,4 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @GetMapping("/validate")
-    public ResponseEntity<Boolean> validateToken(@RequestHeader("Authorization") String authHeader) {
-        try {
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-                return ResponseEntity.ok(jwtTokenUtil.validateToken(token));
-            }
-            return ResponseEntity.ok(false);
-        } catch (Exception e) {
-            return ResponseEntity.ok(false);
-        }
-    }
 } 

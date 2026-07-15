@@ -10,6 +10,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 反馈接口
+ * 权限：
+ *   提交/查自己 — 登录即可 或 本人即管理员
+ *   管理反馈（全部/状态/类型/回复/删除） — 管理员
+ */
 @RestController
 @RequestMapping("/api/feedback")
 public class FeedbackController {
@@ -25,13 +31,6 @@ public class FeedbackController {
     @PostMapping
     public ResponseEntity<FeedbackDTO> createFeedback(@RequestBody FeedbackRequestDTO requestDTO) {
         return ResponseEntity.ok(feedbackService.createFeedback(requestDTO));
-    }
-
-    @PostMapping("/payment/{paymentId}")
-    public ResponseEntity<FeedbackDTO> createFeedbackForPayment(
-            @PathVariable Long paymentId,
-            @RequestBody FeedbackRequestDTO requestDTO) {
-        return ResponseEntity.ok(feedbackService.createFeedbackForPayment(paymentId, requestDTO));
     }
 
     @GetMapping("/{id}")

@@ -19,6 +19,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 支付接口
+ * 权限：
+ *   创建/查询支付 — 登录即可
+ *   管理支付（status/date-range/simulate） — 管理员
+ */
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {

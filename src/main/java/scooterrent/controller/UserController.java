@@ -12,6 +12,15 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 用户接口
+ * 权限：
+ *   GET/POST /users           — 管理员
+ *   DELETE /users/{username}  — 管理员
+ *   PUT /users/{username}/role — 管理员
+ *   GET/PUT /users/{username} — 本人或管理员
+ *   PUT password / POST recharge — 本人或管理员
+ */
 @RestController
 @RequestMapping("/api/users")
 public class UserController {

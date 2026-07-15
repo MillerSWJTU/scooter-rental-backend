@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 管理后台接口（仪表盘/统计）
+ * 权限：管理员专属
+ */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
