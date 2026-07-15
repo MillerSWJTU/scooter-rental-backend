@@ -62,12 +62,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/users/{username}/role").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
-                // 订单管理
-                .requestMatchers(HttpMethod.GET, "/api/orders").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/orders/status/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/api/orders/*/status").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/orders/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/orders/date-range").hasRole("ADMIN")
                 // 支付管理
                 .requestMatchers(HttpMethod.GET, "/api/payments/status/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/payments/date-range").hasRole("ADMIN")
@@ -88,8 +82,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/users/{username}").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.PUT, "/api/users/{username}/password").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.POST, "/api/users/{username}/recharge").access(selfOrAdmin())
-                .requestMatchers(HttpMethod.GET, "/api/orders/user/{username}").access(selfOrAdmin())
-                .requestMatchers(HttpMethod.GET, "/api/orders/user/{username}/date-range").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.GET, "/api/rentals/user/{username}").access(selfOrAdmin())
                 .requestMatchers(HttpMethod.GET, "/api/feedback/user/{username}").access(selfOrAdmin())
 
@@ -97,7 +89,6 @@ public class SecurityConfig {
                 // 4. 登录即可（USER / DISCOUNT / ADMIN）
                 // =============================================
                 .requestMatchers("/api/rentals/**").hasAnyRole("USER", "DISCOUNT", "ADMIN")
-                .requestMatchers("/api/orders/**").hasAnyRole("USER", "DISCOUNT", "ADMIN")
                 .requestMatchers("/api/payments/**").hasAnyRole("USER", "DISCOUNT", "ADMIN")
                 .requestMatchers("/api/feedback/**").hasAnyRole("USER", "DISCOUNT", "ADMIN")
 

@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 @Data
 public class PaymentDTO {
     private Integer id;
-    private Long orderId;
     private Long rentalId;
     private Double amount;
     private String paymentMethod;
