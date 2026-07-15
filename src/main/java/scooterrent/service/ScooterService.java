@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.modelmapper.ModelMapper;
-import scooterrent.dto.ScooterStatsDTO;
 import scooterrent.repository.RentalRepository;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,13 +56,6 @@ public class ScooterService {
             dto.setTotalRevenue(stat == null ? 0.0 : stat[2] == null ? 0.0 : ((Number) stat[2]).doubleValue());
             return dto;
         }).collect(Collectors.toList());
-    }
-
-    public List<ScooterDTO> getAvailableScooters() {
-        List<Scooter> scooters = scooterRepository.findByStatus(ScooterStatus.AVAILABLE);
-        return scooters.stream()
-                .map(scooter -> modelMapper.map(scooter, ScooterDTO.class))
-                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -133,29 +125,4 @@ public class ScooterService {
         return modelMapper.map(updatedScooter, ScooterDTO.class);
     }
 
-    public List<ScooterStatsDTO> getScooterStats() {
-        List<Scooter> scooters = scooterRepository.findAll();
-        Map<Long, Object[]> statsMap = new HashMap<>();
-        for (Object[] row : rentalRepository.findScooterRentalStats()) {
-            statsMap.put(((Number)row[0]).longValue(), row);
-        }
-        List<ScooterStatsDTO> result = new java.util.ArrayList<>();
-        for (Scooter s : scooters) {
-            Object[] stat = statsMap.get(s.getId());
-            int rentalCount = stat == null ? 0 : ((Number)stat[1]).intValue();
-            double totalRevenue = stat == null ? 0.0 : stat[2] == null ? 0.0 : ((Number)stat[2]).doubleValue();
-            ScooterStatsDTO dto = new ScooterStatsDTO(
-                s.getId(),
-                s.getModel(),
-                s.getBatteryLevel(),
-                s.getStatus() != null ? s.getStatus().toString() : null,
-                s.getLocation(),
-                s.getPricePerHour(),
-                rentalCount,
-                totalRevenue
-            );
-            result.add(dto);
-        }
-        return result;
-    }
 }

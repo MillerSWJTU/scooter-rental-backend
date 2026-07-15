@@ -2,8 +2,6 @@ package scooterrent.controller;
 
 import scooterrent.dto.ScooterDTO;
 import scooterrent.dto.ScooterPriceUpdateRequest;
-import scooterrent.dto.ScooterStatsDTO;
-import scooterrent.enums.ScooterStatus;
 import scooterrent.service.ScooterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,12 +47,6 @@ public class ScooterController {
         return ResponseEntity.ok(scooterService.getAllScooters());
     }
 
-    @GetMapping("/available")
-    @Operation(summary = "Get Available Scooters", description = "Get list of all available scooters")
-    public ResponseEntity<List<ScooterDTO>> getAvailableScooters() {
-        return ResponseEntity.ok(scooterService.getAvailableScooters());
-    }
-
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete Scooter", description = "Delete a specific scooter")
     public ResponseEntity<Void> deleteScooter(
@@ -86,8 +78,4 @@ public class ScooterController {
         return ResponseEntity.ok(scooterService.updateScooter(id, scooterDTO));
     }
 
-    @GetMapping("/stats")
-    public ResponseEntity<List<ScooterStatsDTO>> getScooterStats() {
-        return ResponseEntity.ok(scooterService.getScooterStats());
-    }
 } 
